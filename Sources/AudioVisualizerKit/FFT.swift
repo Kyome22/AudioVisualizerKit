@@ -3,6 +3,7 @@ import Accelerate
 protocol FFTProtocol: AnyObject {
     init(size: Int, windowType: WindowType)
     func compute(sampleRate: Float, audioData: UnsafePointer<Float>) -> [Magnitude]
+    func rms(audioData: UnsafePointer<Float>) -> Float
 }
 
 public final class FFT: FFTProtocol {
@@ -82,5 +83,11 @@ public final class FFT: FFTProtocol {
         vDSP_vsmul(hertsData, 1, &hertsFactor, &hertsData, 1, fftHalfSize)
 
         return zip(hertsData, magnitudeData).map { Magnitude(hertz: $0, value: $1) }
+    }
+
+    public func rms(audioData: UnsafePointer<Float>) -> Float {
+        var value: Float = 0
+        vDSP_measqv(audioData, 1, &value, vDSP_Length(fftFullSize))
+        return sqrtf(value)
     }
 }

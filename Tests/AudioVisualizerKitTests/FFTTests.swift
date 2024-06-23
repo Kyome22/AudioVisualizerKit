@@ -49,4 +49,16 @@ final class FFTTests: XCTestCase {
         XCTAssertGreaterThan(peak, frequency - 10)
         XCTAssertLessThan(peak, frequency + 10)
     }
+
+    func test_rms() {
+        let fftSize: Int = 512
+        let sampleRate: Float = 512
+        let frequency: Float = 30
+        var data: [Float] = (0 ..< fftSize).map { i in
+            sinf(frequency / sampleRate * 2 * Float.pi * Float(i))
+        }
+        let fft = FFT(size: fftSize, windowType: .hannWindow)
+        let actual = fft.rms(audioData: &data)
+        XCTAssertEqual(actual, 0.70710677)
+    }
 }

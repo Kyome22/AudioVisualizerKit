@@ -15,6 +15,7 @@ public final class AudioAnalyzer: AudioAnalyzerProtocol {
     private let fft: FFT
 
     public var magnitudes: [Magnitude]
+    public var rms: Float = .zero
 
     public init(fftSize: Int = 2048, windowType: WindowType = .hannWindow) {
         self.fftSize = fftSize
@@ -58,6 +59,7 @@ public final class AudioAnalyzer: AudioAnalyzerProtocol {
     func calculate(sampleRate: Float, buffer: AVAudioPCMBuffer) {
         if let data = buffer.floatChannelData {
             magnitudes = fft.compute(sampleRate: sampleRate, audioData: data.pointee)
+            rms = fft.rms(audioData: data.pointee)
         }
     }
 }
