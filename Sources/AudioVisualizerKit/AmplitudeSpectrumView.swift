@@ -11,8 +11,7 @@ public struct AmplitudeSpectrumView: View {
         self.magnitudes = magnitudes
         self.range = range ?? magnitudes.indices
         if let rms {
-            let _hue = min(Double(rms), 1.0) + 0.5
-            hue = _hue < 1.0 ? _hue : _hue - 1.0
+            hue = modf(min(Double(rms), 1.0) + 0.5).1
         } else {
             hue = nil
         }
