@@ -9,6 +9,10 @@ let swiftSettings: [SwiftSetting] = [
 
 let package = Package(
     name: "AudioVisualizerKit",
+    platforms: [
+        .iOS(.v17),
+        .macOS(.v14)
+    ],
     products: [
         .library(
             name: "AudioVisualizerKit",

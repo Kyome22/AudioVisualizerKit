@@ -1,23 +1,22 @@
 import Accelerate
 
-public enum WindowType {
-    case hannWindow
-    case hammingWindow
-    case blackmanWindow
+protocol FFTProtocol: AnyObject {
+    init(size: Int, windowType: WindowType)
+    func compute(sampleRate: Float, audioData: UnsafePointer<Float>) -> [Magnitude]
 }
 
-public final class FFT {
-    private let fftFullLength: vDSP_Length
-    private let fftHalfLength: vDSP_Length
+public final class FFT: FFTProtocol {
     private let windowType: WindowType
+    private let fftFullSize: vDSP_Length
+    private let fftHalfSize: vDSP_Length
     private let mLog2N: vDSP_Length
     private var fftSetup: FFTSetup?
 
-    public init(length: Int, windowType: WindowType = .hannWindow) {
-        fftFullLength = vDSP_Length(length)
-        fftHalfLength = vDSP_Length(length / 2)
+    public init(size: Int, windowType: WindowType) {
         self.windowType = windowType
-        mLog2N = vDSP_Length(log2(Double(length)).rounded() + 1.0)
+        fftFullSize = vDSP_Length(size)
+        fftHalfSize = vDSP_Length(size / 2)
+        mLog2N = vDSP_Length(log2(Double(size)).rounded() + 1.0)
         fftSetup = vDSP_create_fftsetup(mLog2N, FFTRadix(kFFTRadix2))
     }
 
@@ -25,55 +24,63 @@ public final class FFT {
         vDSP_destroy_fftsetup(fftSetup)
     }
 
-    public func compute(_ inAudioData: UnsafePointer<Float>) -> [Float] {
+    public func compute(sampleRate: Float, audioData: UnsafePointer<Float>) -> [Magnitude] {
         guard let fftSetup else {
-            return [Float](repeating: 0, count: Int(fftHalfLength))
+            return .init(repeating: .zero, count: Int(fftHalfSize))
         }
         // Applies the window function.
-        let windowData = UnsafeMutablePointer<Float>.allocate(capacity: Int(fftFullLength))
+        let windowData = UnsafeMutablePointer<Float>.allocate(capacity: Int(fftFullSize))
         defer {
             windowData.deallocate()
         }
         // Creates the window data.
         switch windowType {
         case .hannWindow:
-            vDSP_hann_window(windowData, fftFullLength, 0)
+            vDSP_hann_window(windowData, fftFullSize, 0)
         case .hammingWindow:
-            vDSP_hamm_window(windowData, fftFullLength, 0)
+            vDSP_hamm_window(windowData, fftFullSize, 0)
         case .blackmanWindow:
-            vDSP_blkman_window(windowData, fftFullLength, 0)
+            vDSP_blkman_window(windowData, fftFullSize, 0)
         }
         // Computes the element-wise product of two vectors
         // [1, 2, 3, 4, 5] * [10, 20, 30, 40, 50] => [10, 40, 90, 160, 250]
-        vDSP_vmul(inAudioData, 1, windowData, 1, windowData, 1, fftFullLength)
+        vDSP_vmul(audioData, 1, windowData, 1, windowData, 1, fftFullSize)
+
+        let zeroData = UnsafeMutablePointer<Float>.allocate(capacity: Int(fftFullSize))
+        defer {
+            zeroData.deallocate()
+        }
+        vDSP_vclr(zeroData, 1, fftFullSize)
 
         // Put signal data into real part of complex vector.
         var dspSplitComplex = DSPSplitComplex(
             realp: windowData,
-            imagp: UnsafeMutablePointer<Float>.allocate(capacity: Int(fftFullLength))
+            imagp: zeroData
         )
-        defer {
-            dspSplitComplex.imagp.deallocate()
-        }
 
         // Computes FFT.
         vDSP_fft_zrip(fftSetup, &dspSplitComplex, 1, mLog2N, FFTDirection(FFT_FORWARD))
 
         // Calculates the element-wise division of a vector and a scalar value.
         // Divide the FFT result by the number of elements.
-        var fftNormFactor = Float(fftFullLength)
-        vDSP_vsdiv(dspSplitComplex.realp, 1, &fftNormFactor, dspSplitComplex.realp, 1, fftHalfLength)
-        vDSP_vsdiv(dspSplitComplex.imagp, 1, &fftNormFactor, dspSplitComplex.imagp, 1, fftHalfLength)
+        var fftNormFactor = Float(fftFullSize)
+        vDSP_vsdiv(dspSplitComplex.realp, 1, &fftNormFactor, dspSplitComplex.realp, 1, fftHalfSize)
+        vDSP_vsdiv(dspSplitComplex.imagp, 1, &fftNormFactor, dspSplitComplex.imagp, 1, fftHalfSize)
 
         // Computes the element-wise absolute value of a complex vector.
         // sqrt(real * real + imag * imag)
-        var outFFTData = [Float](repeating: 0, count: Int(fftHalfLength))
-        vDSP_zvabs(&dspSplitComplex, 1, &outFFTData, 1, fftHalfLength)
+        var magnitudeData = [Float](repeating: .zero, count: Int(fftHalfSize))
+        vDSP_zvabs(&dspSplitComplex, 1, &magnitudeData, 1, fftHalfSize)
 
         // Multiply by 2 to get the correct amplitude.
-        var fftHalfFactor = Float(2)
-        vDSP_vsmul(outFFTData, 1, &fftHalfFactor, &outFFTData, 1, fftHalfLength)
+        var fftFactor = Float(2)
+        vDSP_vsmul(magnitudeData, 1, &fftFactor, &magnitudeData, 1, fftHalfSize)
 
-        return outFFTData
+        // Create an array of frequencies
+        var hertsData: [Float] = vDSP.ramp(withInitialValue: .zero, increment: 1, count: Int(fftHalfSize))
+        var hertsFactor = sampleRate / Float(fftFullSize)
+        vDSP_vsmul(hertsData, 1, &hertsFactor, &hertsData, 1, fftHalfSize)
+
+        return zip(hertsData, magnitudeData).map { Magnitude(hertz: $0, value: $1) }
     }
 }
