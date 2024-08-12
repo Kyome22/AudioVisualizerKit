@@ -3,10 +3,11 @@ import iTunesLibrary
 import Observation
 import SwiftUI
 
-@Observable 
+@Observable
 final class MusicListViewModel {
     var musicItems = [MusicItem]()
-    var playingMusicItem: MusicItem?
+    var selectedMusicItem: MusicItem?
+    var isPlaying = false
     let audioAnalyzer = AudioAnalyzer(fftSize: 2048, windowType: .hammingWindow)
 
     func loadMusicItems() {
@@ -27,20 +28,29 @@ final class MusicListViewModel {
     }
 
     func play(musicItem: MusicItem) {
-        let url = musicItem.url
-        if url.startAccessingSecurityScopedResource() {
-            defer {
-                url.stopAccessingSecurityScopedResource()
+        do {
+            if musicItem != selectedMusicItem {
+                if selectedMusicItem != nil {
+                    audioAnalyzer.stop()
+                }
+                let url = musicItem.url
+                if url.startAccessingSecurityScopedResource() {
+                    defer {
+                        url.stopAccessingSecurityScopedResource()
+                    }
+                    try audioAnalyzer.prepare(url: url)
+                    selectedMusicItem = musicItem
+                }
             }
-            do {
-                try audioAnalyzer.play(url: url)
-            } catch {
-                Swift.print(error.localizedDescription)
-            }
+            try audioAnalyzer.play()
+            isPlaying = true
+        } catch {
+            Swift.print(error.localizedDescription)
         }
     }
 
-    func stop() {
-        audioAnalyzer.stop()
+    func pause() {
+        audioAnalyzer.pause()
+        isPlaying = false
     }
 }

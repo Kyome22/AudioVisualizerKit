@@ -6,7 +6,7 @@ struct MusicListView: View {
 
     var body: some View {
         VStack {
-            Text("Title: \(model.playingMusicItem?.title ?? "unknown")")
+            Text("Title: \(model.selectedMusicItem?.title ?? "-")")
             AmplitudeSpectrumView(
                 shapeType: .straight,
                 magnitudes: model.audioAnalyzer.magnitudes,
@@ -19,21 +19,18 @@ struct MusicListView: View {
                     HStack {
                         Text(musicItem.title)
                         Spacer()
-                        if musicItem == model.playingMusicItem {
+                        if musicItem == model.selectedMusicItem, model.isPlaying {
                             Button {
-                                model.playingMusicItem = nil
-                                model.stop()
+                                model.pause()
                             } label: {
-                                Image(systemName: "stop.fill")
+                                Image(systemName: "pause.fill")
                             }
                         } else {
                             Button {
-                                model.playingMusicItem = musicItem
                                 model.play(musicItem: musicItem)
                             } label: {
                                 Image(systemName: "play.fill")
                             }
-                            .disabled(model.playingMusicItem != nil)
                         }
                     }
                 }

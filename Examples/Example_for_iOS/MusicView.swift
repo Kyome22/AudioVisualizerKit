@@ -17,7 +17,8 @@ struct MusicView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             do {
-                try audioAnalyzer.play(url: musicItem.url)
+                try audioAnalyzer.prepare(url: musicItem.url)
+                try audioAnalyzer.play()
             } catch {
                 print(error.localizedDescription)
             }
