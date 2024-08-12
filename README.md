@@ -56,13 +56,13 @@ AudioVisualizerKit is available through [Swift Package Manager](https://github.c
 ## Usage
 
 1. Get the URL of the music file.
-2. Use `AudioAnalyzer` to play music and get magnitudes and rms.
+2. Use `AudioAnalyzer` to play music and get magnitudes and RMS.
    - You can specify the FFT size.
    - You can specify a window function (hann or hamming or blackman).
 3. Use `AmplitudeSpectrumView` to draw the audio visualizer.
    - You can select the shape type (straight or ring). 
    - You can specify the drawing range.
-   - Pass rms to enable color linked to sound intensity.
+   - Pass RMS to enable color linked to sound intensity.
 
 ```swift
 import AudioVisualizerKit
@@ -81,7 +81,8 @@ struct ContentView: View {
         .padding()
         .onAppear {
             let url = Bundle.main.url(forResource: "example", withExtension: "mp3")!
-            try? audioAnalyzer.play(url: url)
+            try? audioAnalyzer.prepare(url: url)
+            try? audioAnalyzer.play()
         }
         .onDisappear {
             audioAnalyzer.stop()
