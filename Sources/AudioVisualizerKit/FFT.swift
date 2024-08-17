@@ -44,26 +44,26 @@ public final class FFT: FFTProtocol {
             vDSP_blkman_window(windowData, fftFullSize, 0)
         }
         // Computes the element-wise product of two vectors
-        // [1, 2, 3, 4, 5] * [10, 20, 30, 40, 50] => [10, 40, 90, 160, 250]
         vDSP_vmul(audioData, 1, windowData, 1, windowData, 1, fftFullSize)
 
+        // Creates a vector with all elements zero.
         let zeroData = UnsafeMutablePointer<Float>.allocate(capacity: Int(fftFullSize))
         defer {
             zeroData.deallocate()
         }
         vDSP_vclr(zeroData, 1, fftFullSize)
 
-        // Put signal data into real part of complex vector.
+        // Puts signal data into real part of complex vector.
         var dspSplitComplex = DSPSplitComplex(
             realp: windowData,
             imagp: zeroData
         )
 
-        // Computes FFT.
+        // Performs Fast Fourier Transform (FFT).
         vDSP_fft_zrip(fftSetup, &dspSplitComplex, 1, mLog2N, FFTDirection(FFT_FORWARD))
 
         // Calculates the element-wise division of a vector and a scalar value.
-        // Divide the FFT result by the number of elements.
+        // Divides the FFT result by the number of elements.
         var fftNormFactor = Float(fftFullSize)
         vDSP_vsdiv(dspSplitComplex.realp, 1, &fftNormFactor, dspSplitComplex.realp, 1, fftHalfSize)
         vDSP_vsdiv(dspSplitComplex.imagp, 1, &fftNormFactor, dspSplitComplex.imagp, 1, fftHalfSize)
@@ -73,7 +73,7 @@ public final class FFT: FFTProtocol {
         var magnitudeData = [Float](repeating: .zero, count: Int(fftHalfSize))
         vDSP_zvabs(&dspSplitComplex, 1, &magnitudeData, 1, fftHalfSize)
 
-        // Multiply by 2 to get the correct amplitude.
+        // Multiplies by 2 to get the correct amplitude.
         var fftFactor = Float(2)
         vDSP_vsmul(magnitudeData, 1, &fftFactor, &magnitudeData, 1, fftHalfSize)
 
