@@ -78,7 +78,7 @@ public final class FFT: FFTProtocol {
         vDSP_vsmul(magnitudeData, 1, &fftFactor, &magnitudeData, 1, fftHalfSize)
 
         // Create an array of frequencies
-        var hertsData: [Float] = vDSP.ramp(withInitialValue: .zero, increment: 1, count: Int(fftHalfSize))
+        var hertsData: [Float] = vDSP.ramp(withInitialValue: 1, increment: 1, count: Int(fftHalfSize))
         var hertsFactor = sampleRate / Float(fftFullSize)
         vDSP_vsmul(hertsData, 1, &hertsFactor, &hertsData, 1, fftHalfSize)
 
