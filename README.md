@@ -2,7 +2,7 @@
 
 Provides the computational assistance for drawing the audio visualizer.
 
-<img src="Screenshots/sample.png" width="400px" />
+<img src="Screenshots/audio_visualizer.gif" height="220px" />
 
 ## Requirements
 
